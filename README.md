@@ -27,6 +27,8 @@ export UNIFIED_FRAMEWORK=/path/to/unifiedframework
 
 A sibling folder named `unified_framework` (same parent directory) wins over vendor.
 
+Full figures: [ARCHITECTURE.md](ARCHITECTURE.md). Industry comparison: [INDUSTRY_VS_OURS.md](INDUSTRY_VS_OURS.md). Module plan: [PLAN.md](PLAN.md).
+
 ## What this repo owns
 
 - Checkov IDs → seven ZTA pillars
