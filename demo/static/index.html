@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZeroGuard — how trust decides</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="kicker">ZeroGuard · trust plane</div>
+    <div class="title">Watch NIST pillars (Ξ, Γ, Ψ), then one fused go / wait / stop</div>
+    <div class="subtitle">Real Checkov IDs through the unified framework. Autoplay every story, or click one. Same pipeline as <code>python3 -m zeroguard.automate</code>.</div>
+    <nav class="site-nav">
+      <a data-peer="cicd" href="../../../CICD/demo/static/index.html">CICD</a>
+      <a data-peer="infra" href="../../../infra/demo/static/index.html">Infra</a>
+      <a data-peer="zeroguard" class="here" href="index.html">ZeroGuard</a>
+      <a data-peer="unified" href="../../../unified_framework/static/index.html">Unified</a>
+    </nav>
+  </header>
+  <section id="offlineBanner" class="gate-banner warn hidden">
+    <div class="gate-action">Start the demo server</div>
+    <div class="gate-reasons">This HTML file needs the Python gate for live stories. Run <code id="offlineCmd">cd ~/Desktop/zeroguard && python3 -m zeroguard.demo</code> then refresh.</div>
+  </section>
+
+  <section class="how">
+    <div><b>This page</b>ZeroGuard only — pillars, Ξ, Γ, Ψ.</div>
+    <div><b>Other pages</b>CICD, Infra, and Unified each have their own URL.</div>
+    <div><b>Automate</b><code>python3 -m zeroguard.automate</code></div>
+    <div><b>Fused gate</b>The pick still uses all three planes; this page only shows trust.</div>
+  </section>
+
+  <main>
+    <section class="story-row">
+      <span class="story-label">Try a release:</span>
+      <button class="story-btn" data-story="pass">All clear — go</button>
+      <button class="story-btn" data-story="warn_capacity">Almost full — wait</button>
+      <button class="story-btn" data-story="warn_rising_errors">Errors rising — wait</button>
+      <button class="story-btn" data-story="fail">Unsafe setup — stop</button>
+      <button class="story-btn" data-story="secure_but_hot">Safe setup, bad traffic</button>
+      <button class="story-btn" data-story="open_sg_but_calm">Quiet traffic, open door</button>
+      <button class="story-btn" data-story="rollback">Site is down — undo</button>
+      <button class="story-btn auto" id="autoplayBtn">▶ Play every story</button>
+    </section>
+
+    <div class="scenario-blurb" id="scenarioBlurb">ZeroGuard page — trust plane only.</div>
+
+    <section class="flow-diagram" id="flowDiagram">
+      <div class="flow-node" data-stage="ingest"><div class="flow-dot"></div><div class="flow-name">Read IaC</div><div class="flow-detail" id="flowIngest">Checkov IDs</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" data-stage="zeroguard"><div class="flow-dot"></div><div class="flow-name">Trust</div><div class="flow-detail" id="flowZeroguard">Is the setup locked down?</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" data-stage="gate"><div class="flow-dot"></div><div class="flow-name">Decision</div><div class="flow-detail" id="flowGate">Go / wait / stop</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" data-stage="audit"><div class="flow-dot"></div><div class="flow-name">Signed log</div><div class="flow-detail" id="flowAudit">Sealed</div></div>
+    </section>
+
+    <section id="gateBanner" class="gate-banner hidden">
+      <div class="gate-action" id="gateAction">—</div>
+      <div class="gate-reasons" id="gateReasons"></div>
+    </section>
+
+    <section class="planes solo" id="planes">
+      <article class="plane home" id="zeroguard">
+        <h2>Trust <span class="tag">ZeroGuard page</span></h2>
+        <div class="metric-row">
+          <div class="metric"><span class="metric-label">trust</span><span class="metric-value" id="zgPsi">—</span></div>
+          <div class="metric"><span class="metric-label">posture</span><span class="metric-value" id="zgXi">—</span></div>
+          <div class="metric"><span class="metric-label">extra access</span><span class="metric-value" id="zgGamma">—</span></div>
+        </div>
+        <div class="subhead">Trust rules we check</div>
+        <div class="pillars" id="zgPillars"></div>
+      </article>
+    </section>
+
+    <section class="lower-row">
+      <div class="audit" id="auditSection">
+        <h2>Signed log <span class="tag" id="chainOk">—</span></h2>
+        <div class="audit-entry" id="auditEntry">Play a story to see the signed record.</div>
+        <div class="subhead">Notes collected this run</div>
+        <ul class="bus-log" id="busLog"></ul>
+      </div>
+      <div class="live-log" id="liveLogSection">
+        <h2>What just happened <span class="tag">step by step</span></h2>
+        <ul class="event-log" id="eventLog"><li class="log-empty">Waiting…</li></ul>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">No auto-patch of IAM. Automate with python3 -m zeroguard.automate</footer>
+  <script>
+    window.DEMO = {
+      origin: "http://127.0.0.1:8873",
+      cmd: "cd ~/Desktop/zeroguard && python3 -m zeroguard.demo",
+      peers: {
+        cicd: { http: "http://127.0.0.1:8871/", file: "../../../CICD/demo/static/index.html" },
+        infra: { http: "http://127.0.0.1:8872/", file: "../../../infra/demo/static/index.html" },
+        zeroguard: { http: "http://127.0.0.1:8873/", file: "../../../zeroguard/demo/static/index.html" },
+        unified: { http: "http://127.0.0.1:8877/", file: "../../../unified_framework/static/index.html" }
+      }
+    };
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>

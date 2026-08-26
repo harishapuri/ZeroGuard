@@ -13,7 +13,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Unit tests
-        run: python3 -m unittest tests.test_zeroguard -v
+        run: python3 -m unittest tests.test_zeroguard tests.test_automate -v
+      - name: Automate all demo stories
+        run: python3 -m zeroguard.automate
       - name: Shadow pass fixture
         run: |
           python3 -m zeroguard vendor/unified_framework/examples/checkov_pass.json \

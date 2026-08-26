@@ -12,6 +12,16 @@ Sibling products: [`CICD`](../CICD) (rules) and [`infra`](../infra) (stay-up). S
 
 It does not auto-patch IAM or security groups.
 
+## Demo and automation
+
+```bash
+cd zeroguard
+python3 -m zeroguard.demo          # http://127.0.0.1:8873/
+python3 -m zeroguard.automate      # all 7 stories, exit 1 if a pick drifts
+```
+
+Open-door on calm traffic is the trust story: pillars drop and the fused gate still **stops**.
+
 ## Run
 
 ```bash
@@ -35,13 +45,14 @@ A sibling `../unified_framework` wins over vendor.
 ## Tests
 
 ```bash
-python3 -m unittest tests.test_zeroguard -v
+python3 -m unittest tests.test_zeroguard tests.test_automate -v
 ```
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
-| `zeroguard/` | Trust CLI wrapping the unified orchestrator |
+| `zeroguard/` | Trust CLI, browser demo, headless automate |
+| `demo/static/` | Autoplay UI (SSE) |
 | `vendor/unified_framework/` | Shared pillars, ingest, bus, audit, gate |
-| `.github/workflows/gate.yml` | Shadow gate on push |
+| `.github/workflows/gate.yml` | Tests + automate + shadow gate |
