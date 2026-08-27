@@ -17,8 +17,8 @@ cd ZeroGuard
 | --- | --- |
 | [unifiedframework](https://github.com/harishapuri/unifiedframework) | Fused CRC × ZeroGuard × InfraAgent gate (source of `vendor/unified_framework`) |
 | [MAWS](https://github.com/harishapuri/MAWS) | Hive orchestrator (named agents, stay-on-blue) |
-| [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance) | CRC / CI-CD rules (η) |
-| [infraagent](https://github.com/harishapuri/infraagent) | Stay-up / rollout (Ω) |
+| [infraagent](https://github.com/harishapuri/infraagent) | CRC / CI-CD rules (η) |
+| [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance) | Stay-up / rollout (Ω) |
 
 This repo runs alone via `vendor/unified_framework`. To use a live checkout instead:
 

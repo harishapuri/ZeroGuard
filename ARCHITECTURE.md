@@ -6,7 +6,7 @@ This repo owns the **trust** plane (ZeroGuard, paper 2143). Question: open doors
 
 Scoring still runs the **fused** gate. CRC η, ZeroGuard Ψ, and InfraAgent Ω share one bus and one go / wait / stop. `--focus` only changes what the CLI prints. Library source: [unifiedframework](https://github.com/harishapuri/unifiedframework) (vendored here as `vendor/unified_framework`).
 
-Sibling planes: [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance) (rules), [infraagent](https://github.com/harishapuri/infraagent) (stay-up).
+Sibling planes: [infraagent](https://github.com/harishapuri/infraagent) (rules), [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance) (stay-up).
 
 ## This repo in the loop
 
