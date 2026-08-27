@@ -16,6 +16,7 @@ const API_BASE = FROM_FILE ? (DEMO.origin || "http://127.0.0.1:8871") : "";
 
 let currentSource = null;
 let sawEvent = false;
+let playingAll = false;
 
 function showOffline(on) {
   const el = document.getElementById("offlineBanner");
@@ -73,7 +74,7 @@ function resetFlowDiagram() {
   setText("flowGate", "Go / wait / stop");
   setText("flowAudit", "Written down and sealed");
   setActiveHive(null);
-  setText("hiveTask", "Waiting for assignment…");
+  setText("hiveTask", "Click a story or Run. The hive stays still until then.");
 }
 
 function setActiveHive(agent) {
@@ -232,6 +233,8 @@ function handleEvent(ev) {
   switch (ev.stage) {
     case "scenario_start":
       resetFlowDiagram();
+      setActiveHive("Supervisor");
+      setText("hiveTask", "Supervisor · assign agents");
       setActiveStoryButton(ev.story);
       setText("scenarioBlurb", ev.detail.blurb);
       logEvent(ev, `▶ ${ev.detail.blurb}`);
@@ -279,6 +282,10 @@ function handleEvent(ev) {
       logEvent(ev, `Decision: <b>${word}</b> — ${ev.detail.reasons.join("; ")}`);
       break;
     }
+    case "rpa":
+      noteHive(ev, "suggest only");
+      logEvent(ev, "RPA suggest-only — apply stays false");
+      break;
     case "compensate":
       noteHive(ev, ev.detail && ev.detail.policy);
       logEvent(ev, ev.detail && ev.detail.blue_stays_live
@@ -299,7 +306,23 @@ function handleEvent(ev) {
       break;
     case "stream_done":
       setAutoplayRunning(false);
-      logEvent(ev, "— all stories finished —");
+      if (playingAll) logEvent(ev, "— all stories finished —");
+      playingAll = false;
+      break;
+    case "error":
+      setAutoplayRunning(false);
+      playingAll = false;
+      logEvent(ev, `Demo stream failed: ${(ev.detail && ev.detail.error) || "unknown error"}`);
+      break;
+    case "automate":
+      if (ev.detail && ev.detail.word) {
+        const reasons = (ev.detail.reasons || []).join("; ");
+        logEvent(ev, `Decision: <b>${ev.detail.word}</b> (${ev.detail.dsa || ""}${reasons ? " — " + reasons : ""})`);
+      } else {
+        logEvent(ev, ev.detail && ev.detail.passed
+          ? `Automate: all ${ev.detail.count} stories matched expected picks.`
+          : "Automate failed: a story pick drifted.");
+      }
       break;
     default:
       break;
@@ -307,29 +330,46 @@ function handleEvent(ev) {
 }
 
 function startStream(story) {
+  startEventSource(`${API_BASE}/api/stream?story=${encodeURIComponent(story)}`, { playingAll: story === "all" });
+}
+
+function startEventSource(url, opts) {
+  const playAll = Boolean(opts && opts.playingAll);
+  const onDone = opts && opts.onDone;
   if (currentSource) {
     currentSource.close();
     currentSource = null;
   }
   sawEvent = false;
   showOffline(false);
-  const es = new EventSource(`${API_BASE}/api/stream?story=${encodeURIComponent(story)}`);
+  const es = new EventSource(url);
   currentSource = es;
-  if (story === "all") setAutoplayRunning(true);
+  playingAll = playAll;
+  if (playAll) setAutoplayRunning(true);
+  else setAutoplayRunning(false);
+  const finish = () => {
+    playingAll = false;
+    if (typeof onDone === "function") onDone();
+  };
   es.onmessage = (msg) => {
+    if (currentSource !== es) return;
     sawEvent = true;
     showOffline(false);
     const ev = JSON.parse(msg.data);
     handleEvent(ev);
-    if (ev.stage === "stream_done") {
+    if (ev.stage === "stream_done" || ev.stage === "error") {
       es.close();
-      currentSource = null;
+      if (currentSource === es) currentSource = null;
+      finish();
     }
   };
   es.onerror = () => {
+    if (currentSource !== es) return;
+    if (es.readyState === EventSource.CONNECTING && sawEvent) return;
     es.close();
     currentSource = null;
     setAutoplayRunning(false);
+    finish();
     if (!sawEvent) showOffline(true);
   };
 }
@@ -338,30 +378,91 @@ document.querySelectorAll(".story-btn:not(.auto)").forEach((btn) => {
   btn.addEventListener("click", () => startStream(btn.dataset.story));
 });
 
-document.getElementById("autoplayBtn").addEventListener("click", () => {
-  if (currentSource) {
-    currentSource.close();
-    currentSource = null;
-    setAutoplayRunning(false);
-    logEvent({ stage: "manual" }, "— autoplay stopped by user —");
-    return;
-  }
-  startStream("all");
-});
+const autoplayBtn = document.getElementById("autoplayBtn");
+if (autoplayBtn) {
+  autoplayBtn.addEventListener("click", () => {
+    if (playingAll && currentSource) {
+      currentSource.close();
+      currentSource = null;
+      playingAll = false;
+      setAutoplayRunning(false);
+      logEvent({ stage: "manual" }, "— autoplay stopped by user —");
+      return;
+    }
+    startStream("all");
+  });
+}
 
-document.querySelectorAll(".artifact").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".plane").forEach((p) => p.classList.remove("highlight"));
-    const el = document.getElementById(btn.dataset.target);
-    if (el) {
-      el.classList.add("highlight");
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      setTimeout(() => el.classList.remove("highlight"), 1400);
+const PLACEHOLDER_GIT = new Set([
+  "",
+  "REPLACE_WITH_GIT_REPO_URL",
+  "YOUR_GIT_REPO_URL",
+  "https://github.com/ORG/REPO.git",
+]);
+
+function filledGitUrl(raw) {
+  const url = String(raw || "").trim();
+  return Boolean(url) && !PLACEHOLDER_GIT.has(url);
+}
+
+const runBtn = document.getElementById("runBtn");
+if (runBtn) {
+  runBtn.addEventListener("click", async () => {
+    showOffline(false);
+    const urlEl = document.getElementById("scanRepoUrl");
+    const refEl = document.getElementById("scanRepoRef");
+    const pathEl = document.getElementById("scanRepoPath");
+    const fields = {
+      git_url: urlEl ? String(urlEl.value || "").trim() : "",
+      ref: refEl && String(refEl.value || "").trim() ? String(refEl.value).trim() : "main",
+      path: pathEl && String(pathEl.value || "").trim() ? String(pathEl.value).trim() : ".",
+    };
+    if (filledGitUrl(fields.git_url)) {
+      runBtn.disabled = true;
+      const qs = new URLSearchParams({
+        story: "repo",
+        git_url: fields.git_url,
+        ref: fields.ref,
+        path: fields.path,
+      });
+      startEventSource(`${API_BASE}/api/stream?${qs.toString()}`, {
+        playingAll: false,
+        onDone: () => {
+          runBtn.disabled = false;
+        },
+      });
+      return;
+    }
+    runBtn.disabled = true;
+    logEvent({ stage: "manual" }, "Run: 7 fixture stories (no git URL in the field) …");
+    try {
+      const res = await fetch(`${API_BASE}/api/automate`);
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = {};
+      }
+      if (!res.ok) {
+        showOffline(true);
+        logEvent({ stage: "manual" }, `Run failed: ${data.error || ("HTTP " + res.status)}`);
+        return;
+      }
+      handleEvent({ stage: "automate", detail: { passed: data.passed, count: (data.stories || []).length } });
+      (data.stories || []).forEach((row) => {
+        const word = row.dsa === "BLOCK" ? "Stop" : row.dsa === "WARN" ? "Wait" : "Go";
+        logEvent(
+          { stage: "manual" },
+          `${row.ok ? "ok" : "FAIL"} ${row.story}: ${word} / ${row.action}${row.ok ? "" : " (expected " + row.expected.action + ")"}`
+        );
+      });
+    } catch (err) {
+      showOffline(true);
+      logEvent({ stage: "manual" }, `Run failed — ${DEMO.cmd || "start the demo server"}`);
+    } finally {
+      runBtn.disabled = false;
     }
   });
-});
+}
 
 wirePeerNav();
-
-// Kick off the pass story automatically so the dashboard is never empty.
-startStream("pass");

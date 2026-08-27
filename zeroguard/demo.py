@@ -19,7 +19,18 @@ from zeroguard.catalog import DEMO_AUDIT, HOST, PORT, ROOT, STATIC, STORIES, STO
 
 from framework.audit import AuditChain
 from framework.bus import MessageBus
-from framework.demo_http import apply_cors, resolve_static, send_options
+from framework.demo_http import (
+    apply_cors,
+    emit_sse_headers,
+    handle_automate,
+    handle_scan,
+    iter_git_scan_events,
+    payload_from_query,
+    pump_sse,
+    read_json_body,
+    resolve_static,
+    send_options,
+)
 from framework.flow import iter_flow
 from framework.orchestrator import Orchestrator
 from framework.peers import open_all_demo_pages, start_peer_demos
@@ -64,6 +75,24 @@ class DemoHandler(BaseHTTPRequestHandler):
     def _sse_write(self, event: dict) -> None:
         self.wfile.write(f"data: {json.dumps(event)}\n\n".encode())
         self.wfile.flush()
+
+    def _automate(self, payload: dict) -> None:
+        from zeroguard.automate import run_all
+
+        def fixtures() -> dict:
+            rows = run_all(STORY_ORDER)
+            return {"plane": "zeroguard", "stories": rows, "passed": all(r["ok"] for r in rows)}
+
+        status, body = handle_automate(payload, run_fixtures=fixtures, audit=DEMO_AUDIT)
+        self._send_json(body, status=status)
+
+    def _scan(self, payload: dict) -> None:
+        status, body = handle_scan(payload, audit=DEMO_AUDIT)
+        self._send_json(body, status=status)
+
+    def _stream_repo(self, payload: dict) -> None:
+        emit_sse_headers(self)
+        pump_sse(self, iter_git_scan_events(payload, audit_path=DEMO_AUDIT, bus_path=DEMO_BUS))
 
     def _stream_stories(self, story_keys: list[str]) -> None:
         self.send_response(200)
@@ -124,15 +153,30 @@ class DemoHandler(BaseHTTPRequestHandler):
             result["story"] = story
             self._send_json(result)
             return
+        if parsed.path == "/api/automate":
+            self._automate({})
+            return
         if parsed.path == "/api/stream":
             qs = parse_qs(parsed.query)
             story = (qs.get("story") or ["pass"])[0]
-            if story == "all":
+            if story == "repo":
+                self._stream_repo(payload_from_query(qs))
+            elif story == "all":
                 self._stream_stories(STORY_ORDER)
             elif story in STORIES:
                 self._stream_stories([story])
             else:
                 self._send_json({"error": f"unknown story '{story}'"}, status=400)
+            return
+        self.send_error(404, "not found")
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/scan":
+            self._scan(read_json_body(self))
+            return
+        if parsed.path == "/api/automate":
+            self._automate({})
             return
         self.send_error(404, "not found")
 

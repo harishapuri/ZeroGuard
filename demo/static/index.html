@@ -16,7 +16,7 @@
       <a data-peer="infra" href="../../../infra/demo/static/index.html">Infra</a>
       <a data-peer="zeroguard" class="here" href="index.html">ZeroGuard</a>
       <a data-peer="maws" href="../../../maws/demo/static/index.html">MAWS</a>
-      <a data-peer="unified" href="../../../unified_framework/static/index.html">Unified</a>
+      <a data-peer="unified" href="http://127.0.0.1:8877/">Unified</a>
     </nav>
   </header>
   <section id="offlineBanner" class="gate-banner warn hidden">
@@ -42,6 +42,14 @@
       <button class="story-btn" data-story="open_sg_but_calm">Quiet traffic, open door</button>
       <button class="story-btn" data-story="rollback">Site is down — undo</button>
       <button class="story-btn auto" id="autoplayBtn">▶ Play every story</button>
+    </section>
+
+    <section class="scan-row" id="scanRow">
+      <label class="story-label" for="scanRepoUrl">Git repo</label>
+      <input id="scanRepoUrl" class="scan-input" type="text" placeholder="https://github.com/ORG/REPO.git" autocomplete="off" spellcheck="false" />
+      <input id="scanRepoRef" class="scan-input tiny" type="text" value="main" title="git ref" aria-label="git ref" />
+      <input id="scanRepoPath" class="scan-input tiny" type="text" value="." title="path inside repo" aria-label="scan path" />
+      <button class="story-btn auto" id="runBtn">Run</button>
     </section>
 
     <div class="scenario-blurb" id="scenarioBlurb">ZeroGuard page — trust plane only.</div>
