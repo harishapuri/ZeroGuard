@@ -5,8 +5,8 @@ GitHub: [harishapuri/ZeroGuard](https://github.com/harishapuri/ZeroGuard)
 Implementation plan for the **ZeroGuard (2143)** plane as its own product, still fused with CRC and InfraAgent.
 
 1. **ZeroGuard (2143)** — this repo: multi-agent zero-trust IaC posture
-2. **CRC (207)** — [infraagent](https://github.com/harishapuri/infraagent)
-3. **InfraAgent (1239)** — [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance)
+2. **CRC (207)** — [CICD_Compliance](https://github.com/harishapuri/CICD_Compliance)
+3. **InfraAgent (1239)** — [infraagent](https://github.com/harishapuri/infraagent)
 
 Shared library: [unifiedframework](https://github.com/harishapuri/unifiedframework), vendored at `vendor/unified_framework`.
 
