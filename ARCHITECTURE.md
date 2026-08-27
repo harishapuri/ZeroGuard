@@ -20,7 +20,8 @@ CRC η · InfraAgent Ω         ← still computed
                 ↓
 Typed bus → DSA go / wait / stop
                 ↓
-GRA wins security attrs (suggest only) · SHA-256 audit · shadow unless --enforce
+GRA wins security attrs (suggest only) · SHA-256 audit
+evidence export · shadow unless --enforce
 ```
 
 This repo does not auto-patch IAM or security groups.
@@ -61,6 +62,7 @@ flowchart TB
   BLUE --> AUD[SHA-256 audit]
   HOLD --> AUD
   GREEN --> AUD
+  AUD --> EV[Evidence export apply false]
 ```
 
 ## ZeroGuard complete flow (paper 2143)

@@ -17,7 +17,15 @@ jobs:
       - name: Automate all demo stories
         run: python3 -m zeroguard.automate
       - name: Shadow pass fixture
+        env:
+          GATE_ACTOR: ${{ github.actor }}
         run: |
           python3 -m zeroguard vendor/unified_framework/examples/checkov_pass.json \
             --telemetry vendor/unified_framework/examples/telemetry_ok.json \
+            --export-evidence artifacts/evidence \
+            --traffic-intent artifacts/traffic \
             --service ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate-evidence
+          path: artifacts/

@@ -15,30 +15,57 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from framework.corp.cli import add_flags as add_corp_flags  # noqa: E402
+from framework.corp.cli import finish as finish_corp  # noqa: E402
+from framework.corp.cli import prepare_checkov  # noqa: E402
 from framework.orchestrator import Orchestrator  # noqa: E402
 from framework.outcome import ACTUALS, record_outcome, scorecard  # noqa: E402
 
 
 def _run_gate(argv: list[str]) -> int:
     p = argparse.ArgumentParser(
-        description="Unified gate: Checkov JSON → CRC + ZeroGuard + InfraAgent → ALLOW/WARN/BLOCK (shadow by default)."
+        description="Unified gate: git repo or Checkov JSON → CRC + ZeroGuard + InfraAgent → ALLOW/WARN/BLOCK (shadow by default)."
     )
-    p.add_argument("checkov_json", type=Path, help="Path to `checkov -o json` output")
+    p.add_argument("checkov_json", nargs="?", type=Path, help="Path to `checkov -o json` output")
+    p.add_argument(
+        "--scan",
+        type=Path,
+        default=None,
+        help="Placeholder JSON with git_url (examples/scan_target.placeholder.json).",
+    )
     p.add_argument("--telemetry", type=Path, default=None, help="Optional metrics JSON (Prometheus/Datadog export)")
     p.add_argument("--service", default="chatbot-api")
     p.add_argument("--autonomy", type=int, default=2, choices=(0, 1, 2, 3))
     p.add_argument("--enforce", action="store_true", help="Leave shadow mode (exit 2 on BLOCK)")
     p.add_argument("--audit", type=Path, default=None)
+    add_corp_flags(p)
     args = p.parse_args(argv)
 
+    from framework.ingest.git_scan import ScanTargetError, clone_and_scan, load_scan_target
+
+    checkov_json = args.checkov_json
+    telemetry = args.telemetry
+    if args.scan:
+        try:
+            target = load_scan_target(args.scan)
+            checkov_json, scanned_telemetry = clone_and_scan(target)
+        except ScanTargetError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        telemetry = telemetry or scanned_telemetry
+    elif checkov_json is None:
+        p.error("pass a Checkov JSON path, or --scan examples/scan_target.placeholder.json")
+
+    checkov_json = prepare_checkov(checkov_json, args)
     orch = Orchestrator(args.audit)
     result = orch.run(
-        args.checkov_json,
-        args.telemetry,
+        checkov_json,
+        telemetry,
         autonomy=args.autonomy,
         shadow=not args.enforce,
         service=args.service,
     )
+    result = finish_corp(result, args)
     print(json.dumps(result, indent=2))
     if args.enforce and result["governance"]["decision"]["dsa"] == "BLOCK":
         return 2

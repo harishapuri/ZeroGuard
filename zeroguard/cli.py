@@ -8,6 +8,9 @@ from pathlib import Path
 
 from zeroguard.bootstrap import UNIFIED_ROOT  # noqa: F401
 
+from framework.corp.cli import add_flags as add_corp_flags
+from framework.corp.cli import finish as finish_corp
+from framework.corp.cli import prepare_checkov
 from framework.orchestrator import Orchestrator
 
 
@@ -22,15 +25,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--enforce", action="store_true")
     parser.add_argument("--audit", type=Path, default=None)
     parser.add_argument("--focus", action="store_true")
+    add_corp_flags(parser)
     args = parser.parse_args(argv)
 
+    checkov = prepare_checkov(args.checkov_json, args)
     result = Orchestrator(args.audit).run(
-        args.checkov_json,
+        checkov,
         args.telemetry,
         autonomy=args.autonomy,
         shadow=not args.enforce,
         service=args.service,
     )
+    result = finish_corp(result, args)
     if args.focus:
         payload = {
             "plane": "zeroguard",
