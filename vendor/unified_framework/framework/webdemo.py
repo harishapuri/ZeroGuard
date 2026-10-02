@@ -21,8 +21,12 @@ from framework.audit import AuditChain
 from framework.bus import MessageBus
 from framework.demo_http import (
     apply_cors,
+    emit_sse_headers,
     handle_automate,
     handle_scan,
+    iter_git_scan_events,
+    payload_from_query,
+    pump_sse,
     read_json_body,
     resolve_static,
     send_options,
@@ -152,6 +156,10 @@ class DemoHandler(BaseHTTPRequestHandler):
         status, body = handle_scan(payload, audit=DEMO_AUDIT)
         self._send_json(body, status=status)
 
+    def _stream_repo(self, payload: dict) -> None:
+        emit_sse_headers(self)
+        pump_sse(self, iter_git_scan_events(payload, audit_path=DEMO_AUDIT, bus_path=DEMO_BUS))
+
     def _stream_stories(self, story_keys: list[str]) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -223,7 +231,9 @@ class DemoHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/stream":
             qs = parse_qs(parsed.query)
             story = (qs.get("story") or ["pass"])[0]
-            if story == "all":
+            if story == "repo":
+                self._stream_repo(payload_from_query(qs))
+            elif story == "all":
                 self._stream_stories(STORY_ORDER)
             elif story in STORIES:
                 self._stream_stories([story])

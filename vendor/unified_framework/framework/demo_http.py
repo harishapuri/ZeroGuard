@@ -60,6 +60,86 @@ def payload_from_query(qs: dict[str, list[str]]) -> dict[str, str]:
     }
 
 
+def emit_sse_headers(handler, *, keep_alive: bool = True) -> None:
+    handler.send_response(200)
+    handler.send_header("Content-Type", "text/event-stream")
+    handler.send_header("Cache-Control", "no-cache")
+    handler.send_header("Connection", "keep-alive" if keep_alive else "close")
+    handler.send_header("X-Accel-Buffering", "no")
+    apply_cors(handler)
+    handler.end_headers()
+
+
+def pump_sse(handler, events) -> None:
+    import time
+
+    try:
+        for ev in events:
+            handler.wfile.write(f"data: {json.dumps(ev, default=str)}\n\n".encode())
+            handler.wfile.flush()
+            time.sleep(float(ev.get("wait", 0.4)))
+    except (BrokenPipeError, ConnectionResetError):
+        pass
+
+
+def iter_git_scan_events(
+    payload: dict[str, Any] | None,
+    *,
+    audit_path: Path,
+    bus_path: Path | None = None,
+    service: str = "git-scan",
+):
+    """Clone the repo, then yield the same staged hive events as a fixture story."""
+    from framework.audit import AuditChain
+    from framework.bus import MessageBus
+    from framework.flow import iter_flow
+    from framework.ingest.git_scan import ScanTargetError, clone_and_scan, parse_scan_target
+
+    payload = payload or {}
+    git_url = git_url_from_payload(payload)
+    if not git_url:
+        yield {
+            "stage": "error",
+            "wait": 0.0,
+            "story": "repo",
+            "detail": {"error": "Fill the Git repo field first (clone URL or local path)."},
+        }
+        yield {"stage": "stream_done", "wait": 0.0, "detail": {}}
+        return
+
+    ref = str(payload.get("ref") or "main").strip() or "main"
+    path = str(payload.get("path") or ".").strip() or "."
+    yield {
+        "stage": "scenario_start",
+        "wait": 0.4,
+        "story": "repo",
+        "agent": "Supervisor",
+        "task": "clone_repo",
+        "detail": {"blurb": f"Clone and scan {git_url}", "service": service},
+    }
+    with tempfile.TemporaryDirectory(prefix="crc-scan-") as tmp:
+        try:
+            target = parse_scan_target({"git_url": git_url, "ref": ref, "path": path}, source="ui")
+            checkov_json, telemetry = clone_and_scan(target, work_dir=Path(tmp))
+        except ScanTargetError as exc:
+            yield {"stage": "error", "wait": 0.0, "story": "repo", "detail": {"error": str(exc)}}
+            yield {"stage": "stream_done", "wait": 0.0, "detail": {}}
+            return
+        audit = AuditChain(audit_path)
+        bus = MessageBus(path=bus_path) if bus_path else MessageBus.from_env()
+        for ev in iter_flow(
+            checkov_json,
+            telemetry,
+            audit,
+            service=service,
+            shadow=True,
+            bus=bus,
+        ):
+            ev["story"] = "repo"
+            yield ev
+    yield {"stage": "stream_done", "wait": 0.0, "detail": {}}
+
+
 def git_url_from_payload(payload: dict[str, Any] | None) -> str:
     from framework.ingest.git_scan import is_filled_git_url
 
