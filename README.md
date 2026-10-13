@@ -2,7 +2,7 @@
 
 GitHub: [harishapuri/ZeroGuard](https://github.com/harishapuri/ZeroGuard)
 
-Zero-trust IaC posture (paper 2143). NIST SP 800-207 pillars, Ξ, privilege excess Γ, and Ψ still join CRC η and InfraAgent Ω on the unified bus. One DSA pick. GRA would own security attributes later; suggestions stay `apply: false`. This repo does not auto-patch IAM or security groups.
+Zero-trust IaC posture (paper 2143). NIST SP 800-207 pillars, Ξ, privilege excess Γ, and Ψ still join CRC η and InfraAgent Ω on the unified bus. One DSA pick. Gate suggestions stay `apply: false`. A separate, opt-in `zeroguard.remediate` command can fix a short allowlist of low-risk Terraform settings; it is a dry run unless you pass `--apply`. This repo never auto-patches IAM, security groups, or network ACLs.
 
 Python module name after clone is `zeroguard`.
 
@@ -65,19 +65,45 @@ python3 -m zeroguard vendor/unified_framework/examples/checkov_pass.json \
 
 `--enforce` exits `2` on BLOCK. Default is shadow.
 
+## Opt-in remediation (dry run by default)
+
+`zeroguard.remediate` reads Checkov JSON and fixes only allowlisted, low-risk settings: each one sets a single boolean on one resource type and updates the resource in place.
+
+| Checkov ID | Resource | Setting |
+| --- | --- | --- |
+| CKV_AWS_7 | `aws_kms_key` | `enable_key_rotation = true` |
+| CKV_AWS_27 | `aws_sqs_queue` | `sqs_managed_sse_enabled = true` |
+| CKV_AWS_36 | `aws_cloudtrail` | `enable_log_file_validation = true` |
+| CKV_AWS_131 | `aws_lb` / `aws_alb` | `drop_invalid_header_fields = true` |
+| CKV_AWS_150 | `aws_lb` / `aws_alb` | `enable_deletion_protection = true` |
+| CKV_AWS_293 | `aws_db_instance` | `deletion_protection = true` |
+
+Everything else is skipped with a reason. IAM, security groups, and network ACLs are on a deny list that wins even over the allowlist.
+
+```bash
+# Dry run: prints the plan and a unified diff, writes nothing
+python3 -m zeroguard.remediate examples/remediate/checkov_remediate.json --root examples/remediate
+
+# Write the changes and record the run in the hash-chained audit log
+python3 -m zeroguard.remediate checkov.json --root . --apply --audit data/audit.jsonl
+```
+
+Other guards: files must resolve inside `--root`, at most 10 fixes per run (`--max-fixes`), multi-line values are left for a human, and a second run is a no-op. Review the diff and open a pull request as usual; this tool edits files, it does not run `terraform apply`. The example Terraform under `examples/remediate/` is illustrative, not a real environment.
+
 ## Tests and CI
 
 ```bash
-python3 -m unittest tests.test_zeroguard tests.test_automate -v
+python3 -m unittest tests.test_zeroguard tests.test_automate tests.test_remediate -v
 ```
 
-`.github/workflows/gate.yml` runs unit tests, `python3 -m zeroguard.automate`, and a shadow pass fixture on every push and pull request.
+`.github/workflows/gate.yml` runs unit tests, `python3 -m zeroguard.automate`, a shadow pass fixture, and a remediation dry run (checked to write nothing) on every push and pull request.
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
-| `zeroguard/` | Trust CLI, browser demo, headless automate |
+| `zeroguard/` | Trust CLI, browser demo, headless automate, opt-in remediation |
+| `examples/remediate/` | Illustrative Terraform + Checkov JSON for the remediation dry run |
 | `demo/static/` | Autoplay UI (SSE) |
 | `vendor/unified_framework/` | Shared pillars, ingest, bus, audit, gate |
 | `.github/workflows/gate.yml` | Tests + automate + shadow gate |

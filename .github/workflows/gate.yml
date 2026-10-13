@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Unit tests
-        run: python3 -m unittest tests.test_zeroguard tests.test_automate -v
+        run: python3 -m unittest tests.test_zeroguard tests.test_automate tests.test_remediate -v
       - name: Automate all demo stories
         run: python3 -m zeroguard.automate
       - name: Shadow pass fixture
@@ -25,6 +25,11 @@ jobs:
             --export-evidence artifacts/evidence \
             --traffic-intent artifacts/traffic \
             --service ci
+      - name: Remediation dry run (writes nothing)
+        run: |
+          python3 -m zeroguard.remediate examples/remediate/checkov_remediate.json \
+            --root examples/remediate --audit artifacts/remediation_audit.jsonl
+          git diff --exit-code examples/remediate
       - uses: actions/upload-artifact@v4
         with:
           name: gate-evidence

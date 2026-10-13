@@ -1,5 +1,7 @@
 # Industry deploy vs our trust gate
 
+> **Note:** Northstar Bank is a fictional, illustrative scenario. It is not a client, and the story figures are not measured results.
+
 GitHub: [harishapuri/ZeroGuard](https://github.com/harishapuri/ZeroGuard)
 
 **Northstar Bank** still ships a chatbot with **blue** and **green**. This repo is the **trust** plane: open doors, extra permissions, unusual grants?

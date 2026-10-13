@@ -1,0 +1,16 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "passed_checks": [],
+    "failed_checks": [
+      {"check_id": "CKV_AWS_7", "check_name": "Ensure rotation for customer created CMKs is enabled", "resource": "aws_kms_key.ledger", "file_path": "/infra/data.tf", "file_line_range": [3, 6], "severity": "MEDIUM"},
+      {"check_id": "CKV_AWS_27", "check_name": "Ensure all data stored in the SQS queue is encrypted", "resource": "aws_sqs_queue.events", "file_path": "/infra/data.tf", "file_line_range": [8, 10], "severity": "MEDIUM"},
+      {"check_id": "CKV_AWS_293", "check_name": "Ensure that AWS database instances have deletion protection enabled", "resource": "aws_db_instance.ledger", "file_path": "/infra/data.tf", "file_line_range": [12, 19], "severity": "MEDIUM"},
+      {"check_id": "CKV_AWS_150", "check_name": "Ensure that Load Balancer has deletion protection enabled", "resource": "aws_lb.chatbot", "file_path": "/infra/edge.tf", "file_line_range": [3, 7], "severity": "LOW"},
+      {"check_id": "CKV_AWS_131", "check_name": "Ensure that ALB drops HTTP headers", "resource": "aws_lb.chatbot", "file_path": "/infra/edge.tf", "file_line_range": [3, 7], "severity": "LOW"},
+      {"check_id": "CKV_AWS_24", "check_name": "Ensure no security groups allow ingress from 0.0.0.0:0 to port 22", "resource": "aws_security_group.chatbot", "file_path": "/infra/edge.tf", "file_line_range": [9, 18], "severity": "HIGH"},
+      {"check_id": "CKV_AWS_40", "check_name": "Ensure IAM policies are attached only to groups or roles", "resource": "aws_iam_policy.chatbot_admin", "file_path": "/infra/edge.tf", "file_line_range": [20, 23], "severity": "HIGH"},
+      {"check_id": "CKV_AWS_144", "check_name": "Ensure that S3 bucket has cross-region replication enabled", "resource": "aws_s3_bucket.receipts", "file_path": "/infra/s3.tf", "file_line_range": [1, 3], "severity": "LOW"}
+    ]
+  }
+}

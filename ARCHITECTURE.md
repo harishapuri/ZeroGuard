@@ -24,7 +24,7 @@ GRA wins security attrs (suggest only) · SHA-256 audit
 evidence export · shadow unless --enforce
 ```
 
-This repo does not auto-patch IAM or security groups.
+The gate itself never patches anything. The separate, opt-in `zeroguard.remediate` command (dry run unless `--apply`) fixes only an allowlist of low-risk, in-place Terraform booleans and records each run in the audit chain. IAM, security groups, and network ACLs are never auto-patched. See the README for the allowlist.
 
 ## All in one — upstream to downstream
 
@@ -80,7 +80,7 @@ flowchart TB
   PSI --> BUS[ZtaScore / PatchSet apply=false]
 ```
 
-**Shipped in this repo:** classify each Checkov ID onto the same 7 NIST SP 800-207 pillars. Γ from IAM failures + `privilege_excess`. No auto-patch. GRA still wins the conflict rule when a suggestion exists. `python3 -m zeroguard --focus` prints trust plus the fused decision.
+**Shipped in this repo:** classify each Checkov ID onto the same 7 NIST SP 800-207 pillars. Γ from IAM failures + `privilege_excess`. The gate does not patch; opt-in `zeroguard.remediate` covers allowlisted low-risk settings only. GRA still wins the conflict rule when a suggestion exists. `python3 -m zeroguard --focus` prints trust plus the fused decision.
 
 Open-door on **calm** traffic is the trust story: pillars drop and the fused gate still **stops**.
 
